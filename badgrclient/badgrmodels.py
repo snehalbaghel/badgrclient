@@ -71,37 +71,50 @@ class Base(ABC):
 
         self.set_data(result)
 
+    def __repr__(self):
+        return '{}({})'.format(self.__class__.__name__, self.entityId)
+
 
 class Assertion(Base):
 
     ENDPOINT = '/v2/assertions'
 
-    def create(self, badgeclass, recipient_email, evidence=None):
+    def create(
+            self,
+            badgeclass,
+            recipient_email,
+            narrative=None,
+            evidence=None,
+            notify=True
+            ):
         """Issue an Assetion to a single recipient
 
         Args:
             badgeclass (string): entityId of the badgeclass to issue
             recipient_email (string): Email of the person to issue the badge
+            narrative (string, optional): Describe how to badge was earned
             evidence (dict { url (string), narrative (string) },
-                optional): Evidence to attach to this assertion
+                optional): Evidence to attach to this assertion,
+            notify (bool, optional): Should the recipient be notified
         """
         payload = {
-            'badgeclass': badgeclass,
             'recipient': {
                 'type': 'email',
                 'identity': recipient_email,
             },
-            'evidence': evidence
+            'narrative': narrative,
+            'evidence': evidence,
+            'notify': notify
         }
 
         response = self.client._call_api(
-            Assertion.ENDPOINT,
+            BadgeClass.ENDPOINT + '/{}/assertions'.format(badgeclass),
             'POST',
             data=payload)
 
         self.set_data(response['result'][0])
 
-        return True
+        return self
 
     @eid_required
     def revoke(self, reason):
@@ -196,7 +209,32 @@ class BadgeClass(Base):
             data=payload)
         self.set_data(response['result'][0])
 
-        return True
+        return self
+
+    @eid_required
+    def issue(
+            self,
+            recipient_email,
+            narrative=None,
+            evidence=None,
+            notify=True):
+        """Issue this badge
+
+        Args:
+            recipient_email (string): Email of the person to issue the badge
+            narrative (string, optional): Describe how to badge was earned
+            evidence (dict { url (string), narrative (string) },
+                optional): Evidence to attach to this assertion,
+            notify (bool, optional): Should the recipient be notified
+        """
+        new_assertion = Assertion(self.client).create(
+            self.entityId,
+            narrative,
+            evidence,
+            notify
+        )
+
+        return new_assertion
 
 
 class Issuer(Base):
@@ -223,7 +261,7 @@ class Issuer(Base):
         response = self.client._call_api(Issuer.ENDPOINT, 'POST', data=payload)
         self.set_data(response['result'][0])
 
-        return True
+        return self
 
     @eid_required
     def fetch_assertions(self):
