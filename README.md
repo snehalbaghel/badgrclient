@@ -17,8 +17,8 @@ Fetch your entities with the client or by providing an entityId
 >>> my_issuers = client.get_issuer()
 [Issuer(7fde21f03a30dfg), Issuer(de21ce2d52df0)]
 
->>> baby_badger = client.get_badgeclass('entity_id')
-[BadgeClass(nm190nsk093msdf)]
+>>> baby_badger = client.get_badgeclass('entity_id')[0]
+BadgeClass(nm190nsk093msdf)
 ```
 
 Use member functions to perform actions on the entity
