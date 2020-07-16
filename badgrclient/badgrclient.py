@@ -1,11 +1,13 @@
 import requests
 import logging
 import datetime
+import base64
 from .badgrmodels import (
     Assertion,
     BadgeClass,
     Issuer,
     )
+from typing import List, Union
 
 MODELS = {
     'Assertion': Assertion,
@@ -16,6 +18,10 @@ MODELS = {
 Logger = logging.getLogger('badgrclient')
 
 
+class APIError(Exception):
+    pass
+
+
 class BadgrClient:
 
     def __init__(
@@ -23,7 +29,7 @@ class BadgrClient:
         username: str = None,
         password: str = None,
         client_id: str = None,
-        scope: str = None,
+        scope: str = 'rw:profile rw:issuer rw:backpack',
         base_url: str = 'http://localhost:8000',
         token: str = None,
         refresh_token: str = None
@@ -48,7 +54,7 @@ class BadgrClient:
         self.base_url = base_url
         if token:
             if not refresh_token:
-                raise Exception('For authentication with token, also provide a \
+                raise APIError('For authentication with token, also provide a \
                     refresh token')
             self.header = {'Authorization': 'Bearer {}'.format(token)}
         else:
@@ -97,18 +103,18 @@ class BadgrClient:
             response = req.json()
         except Exception as err:
             Logger.debug(req.text)
-            raise Exception('Error while decoding JSON: {0}'.format(err))
+            raise APIError('Error while decoding JSON: {0}'.format(err))
 
         if req.status_code >= 300:
             Logger.error(response)
             if 'error' in response:
-                raise Exception(response['error'])
+                raise APIError(response['error'])
 
         if 'status' in response:
             if not response['status']['success']:
                 Logger.error(response)
                 if 'description' in response['status']:
-                    raise Exception(response['status']['description'])
+                    raise APIError(response['status']['description'])
 
         return response
 
@@ -151,7 +157,8 @@ class BadgrClient:
             "Authorization": "Bearer " + response['access_token']
         }
 
-    def _deserialize(self, result: list) -> list:
+    def _deserialize(self, result: list) -> List[
+            Union[BadgeClass, Assertion, Issuer]]:
         """
             Get the appropriate model instances list from result list
         Args:
@@ -185,13 +192,28 @@ class BadgrClient:
 
         return self._deserialize(response['result'])
 
+    @staticmethod
+    def encode_image(file: str):
+        """
+        Encode file to base64 data-uri string
+        Args:
+            file (str): the path to file
+        """
+        with open(file, 'rb') as img_f:
+            encoded_string = 'data:image/{};base64,{}'.format(
+                file.split('.')[-1],
+                base64.b64encode(img_f.read()).decode('utf8'),
+            )
+
+            return encoded_string
+
     def fetch_tokens(self):
         """Get a list of access tokens for authenticated user
         """
         response = self._call_api('/v2/auth/tokens')
         return response.result
 
-    def fetch_assertion(self, eid=None):
+    def fetch_assertion(self, eid=None) -> List[Assertion]:
         """
         Get Assertion of the specified entityId, if eid is not provided
         then get a list of Assertions in authenticated user's backpack
@@ -209,7 +231,7 @@ class BadgrClient:
 
         return self._deserialize(response['result'])
 
-    def fetch_badgeclass(self, eid=None):
+    def fetch_badgeclass(self, eid=None) -> List[BadgeClass]:
         """
         Get BadgeClass of the specified entityId, if eid is not provided
         then get a list of BadgeClasses for authenticated user
@@ -220,7 +242,7 @@ class BadgrClient:
 
         return self._fetch_id_or_self(BadgeClass.ENDPOINT, eid)
 
-    def fetch_issuer(self, eid=None):
+    def fetch_issuer(self, eid=None) -> List[Issuer]:
         """
         Get Issuer of the specified entityId, if eid is not provided
         then get a list of Issuers for authenticated user

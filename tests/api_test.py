@@ -1,8 +1,11 @@
 import pytest
 import time
-from badgrclient import BadgrClient
+from badgrclient import BadgrClient, Issuer, BadgeClass
+from pathlib import Path
+
 
 TOKEN_URL = 'http://localhost:8000/o/token'
+TEST_IMAGE_PATH = str(Path('tests/test_image.png'))
 
 
 def get_mock_auth_text(token: str = 'mock_token', expiry: int = 86400):
@@ -157,3 +160,59 @@ def test_create_user(client, mocker):
         },
         auth=False
     )
+
+
+def test_encode_image(client):
+    encoded_string = client.encode_image(TEST_IMAGE_PATH)
+    assert encoded_string == 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Ng+M9QDwADgQF/iwmQSQAAAABJRU5ErkJggg=='  # noqa: E501
+
+
+def test_create_issuer(client, mocker):
+    mocker.patch('badgrclient.BadgrClient._call_api')
+    Issuer(client).create(
+        'Fedora',
+        'Fedora Issuer',
+        'test@fedoraproject.org',
+        'http://fegora.org',
+        client.encode_image(TEST_IMAGE_PATH)
+    )
+    BadgrClient._call_api.assert_called_once_with(
+        '/v2/issuers',
+        'POST',
+        data={
+            'name': 'Fedora',
+            'description': 'Fedora Issuer',
+            'email': 'test@fedoraproject.org',
+            'url': 'http://fegora.org',
+            'image': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Ng+M9QDwADgQF/iwmQSQAAAABJRU5ErkJggg=='  # noqa: E501
+        }
+    )
+
+
+def test_create_badgeclass(client, mocker):
+    mocker.patch('badgrclient.BadgrClient._call_api')
+    BadgeClass(client).create(
+        'Speak Up!',
+        client.encode_image(TEST_IMAGE_PATH),
+        'Participated in an IRC meeting.',
+        'aeIo_u',
+        criteria_url='https://github.com/dtgay/badges/blob/master/docs/badges.rst',
+        tags=['irc', 'community']
+    )
+    BadgrClient._call_api.assert_called_once_with(
+        '/v2/badgeclasses',
+        'POST',
+        data={
+            'name': 'Speak Up!',
+            'issuer': 'aeIo_u',
+            'description': 'Participated in an IRC meeting.',
+            'criteria_url': 'https://github.com/dtgay/badges/blob/master/docs/badges.rst',
+            'image': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Ng+M9QDwADgQF/iwmQSQAAAABJRU5ErkJggg==',  # noqa: E501
+            'tags': ['irc', 'community'],
+            'alignments': [],
+            'expires': None,
+            'criteria_text': None,
+        }
+    )
+
+# def test_issuer_fetch_assertions(client):

@@ -1,5 +1,6 @@
 import functools
 from abc import ABC
+from typing import List, cast
 
 
 def eid_required(func):
@@ -9,6 +10,8 @@ def eid_required(func):
             return func(self, *args, **kwargs)
         else:
             raise Exception('entityId is required for this operation')
+
+    return check_id
 
 
 class Base(ABC):
@@ -35,11 +38,11 @@ class Base(ABC):
 
         return self
 
-    def get_entity_ep(self):
+    def get_entity_ep(self) -> str:
         return self.ENDPOINT + '/{}'.format(self.entityId)
 
     @eid_required
-    def delete(self):
+    def delete(self) -> dict:
         """Delete entity
             Returns:
                 Response dict
@@ -50,13 +53,14 @@ class Base(ABC):
         return response
 
     @eid_required
-    def update(self):
+    def update(self) -> dict:
         """Update entity
         Returns:
             Response dict
         """
         ep = self.get_entity_ep()
         response = self.client._call_api(ep, 'PUT', data=self.data)
+        # Fetch again to update self
         self.fetch(self.get_entity_ep())
         return response
 
@@ -86,7 +90,7 @@ class Assertion(Base):
             narrative=None,
             evidence=None,
             notify=True
-            ):
+            ) -> 'Assertion':
         """Issue an Assetion to a single recipient
 
         Args:
@@ -117,7 +121,7 @@ class Assertion(Base):
         return self
 
     @eid_required
-    def revoke(self, reason):
+    def revoke(self, reason) -> dict:
         """Revoke this assertion
         Args:
             reason (string): Reason of revocation
@@ -134,20 +138,6 @@ class BadgeClass(Base):
 
     ENDPOINT = '/v2/badgeclasses'
 
-    @eid_required
-    def fetch_assertions(self, recipient=None, num=None):
-        """
-        Get a list of Assertions for this badgeclass
-
-        Args:
-            recipient (string, optional): Filter by recipient
-            num (string, optional): Request pagination of results
-        """
-        ep = BadgeClass.ENDPOINT + '/{}/assertions'.format(self.entityId)
-        response = self.client._call_api(ep)
-
-        return self.client._deserialize(response['result'])
-
     def create(
         self,
         name,
@@ -159,7 +149,7 @@ class BadgeClass(Base):
         alignment=None,
         tags=None,
         expires=None
-    ):
+    ) -> 'BadgeClass':
         """Create a new badgeclass
 
         Args:
@@ -212,13 +202,30 @@ class BadgeClass(Base):
         return self
 
     @eid_required
+    def fetch_assertions(self, recipient=None, num=None) -> List[Assertion]:
+        """
+        Get a list of Assertions for this badgeclass
+
+        Args:
+            recipient (string, optional): Filter by recipient
+            num (string, optional): Request pagination
+                of results
+        """
+        ep = BadgeClass.ENDPOINT + '/{}/assertions'.format(self.entityId)
+        response = self.client._call_api(ep)
+        result = cast(
+            List[Assertion],
+            self.client._deserialize(response['result']))
+        return result
+
+    @eid_required
     def issue(
             self,
             recipient_email,
             narrative=None,
             evidence=None,
-            notify=True):
-        """Issue this badge
+            notify=True) -> 'Assertion':
+        """Create a new assertion of this badge
 
         Args:
             recipient_email (string): Email of the person to issue the badge
@@ -229,6 +236,7 @@ class BadgeClass(Base):
         """
         new_assertion = Assertion(self.client).create(
             self.entityId,
+            recipient_email,
             narrative,
             evidence,
             notify
@@ -242,20 +250,23 @@ class Issuer(Base):
     V1_ENDPOINT = '/v1/issuer/issuers/{slug}/staff'
     ENDPOINT = '/v2/issuers'
 
-    def create(self, name, description, email, url):
+    def create(self, name, description, email, url, image=None) -> 'Issuer':
         """Create a new Issuer
 
         Args:
             name (string): Name of issuer
             description (string): Description of issuer
-            email (string): Verified email of the owner
+            email (string): Verified email of the owner, email must be one
+            of your verified addresses.
             url (string): Website URL
+            image (string): bade64 encoded string (data-uri)
         """
         payload = {
             'name': name,
             'description': description,
             'email': email,
-            'url': url
+            'url': url,
+            'image': image
         }
 
         response = self.client._call_api(Issuer.ENDPOINT, 'POST', data=payload)
@@ -264,22 +275,29 @@ class Issuer(Base):
         return self
 
     @eid_required
-    def fetch_assertions(self):
+    def fetch_assertions(self) -> List[Assertion]:
         """Get list of assertions for this issuer
         """
         ep = Issuer.ENDPOINT + '/{}/assertions'.format(self.entityId)
         response = self.client._call_api(ep)
+        result = cast(
+            List[Assertion],
+            self.client._deserialize(response['result']))
 
-        return self.client._deserialize(response['result'])
+        return result
 
     @eid_required
-    def fetch_badgeclasses(self):
+    def fetch_badgeclasses(self) -> List[BadgeClass]:
         """Get a list of BadgeClasses for this issuer
         """
         ep = Issuer.ENDPOINT + '/{}/badgeclasses'.format(self.entityId)
         response = self.client._call_api(ep)
+        result = cast(
+            List[BadgeClass],
+            self.client._deserialize(response['result'])
+        )
 
-        return self.client._deserialize(response['result'])
+        return result
 
     @eid_required
     def create_badgeclass(
@@ -292,12 +310,12 @@ class Issuer(Base):
         alignment=None,
         tags=None,
         expires=None
-    ):
+    ) -> BadgeClass:
         """Create a badgeclass for this issuer
 
         Args:
             name (string): Name of the badge
-            image (string): base64 encoded png/svg image
+            image (string): base64 encoded png/svg image (data-uri string)
             description (String): Short description of the badge
             criteria_text (string, optional): The criteria of earning the badge
             criteria_url (string, optional): Link of the criteria to earn
@@ -333,7 +351,7 @@ class Issuer(Base):
         return badge_class
 
     @eid_required
-    def edit_staff(self, action: str, email: str, role: str):
+    def edit_staff(self, action: str, email: str, role: str) -> dict:
         """Edit the staff list of this issuer
 
         Args:
