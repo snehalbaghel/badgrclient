@@ -3,3 +3,4 @@
 .vscode
 .tox
 *.egg-info
+.idea

@@ -94,10 +94,19 @@ class BadgrClient:
             url=url,
             params=params,
             headers=self.header,
-            data=data,
+            json=data,
             verify=True,
         )
 
+        response = self._get_json(req)
+
+        return response
+
+    @staticmethod
+    def _get_json(req):
+        """
+        Get json from response
+        """
         response = None
         try:
             response = req.json()
@@ -144,11 +153,12 @@ class BadgrClient:
             payload['grant_type'] = 'refresh_token'
             self.refresh_token = None
 
-        response = self._call_api(
-            '/o/token',
-            method='POST',
-            data=payload,
-            auth=False)
+        req = requests.post(
+            self.base_url + '/o/token',
+            data=payload
+        )
+
+        response = self._get_json(req)
 
         self.token_expires_at = now + datetime.timedelta(
             seconds=response['expires_in'])

@@ -1,6 +1,6 @@
 import pytest
 import time
-from badgrclient import BadgrClient, Issuer, BadgeClass
+from badgrclient import BadgrClient, Issuer, BadgeClass, Assertion
 from pathlib import Path
 
 
@@ -206,7 +206,7 @@ def test_create_badgeclass(client, mocker):
             'name': 'Speak Up!',
             'issuer': 'aeIo_u',
             'description': 'Participated in an IRC meeting.',
-            'criteria_url': 'https://github.com/dtgay/badges/blob/master/docs/badges.rst',
+            'criteria_url': 'https://github.com/dtgay/badges/blob/master/docs/badges.rst',  # noqa: E501
             'image': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Ng+M9QDwADgQF/iwmQSQAAAABJRU5ErkJggg==',  # noqa: E501
             'tags': ['irc', 'community'],
             'alignments': [],
@@ -215,4 +215,33 @@ def test_create_badgeclass(client, mocker):
         }
     )
 
-# def test_issuer_fetch_assertions(client):
+
+def test_issuer_fetch_assertions(client, mocker):
+    mocker.patch('badgrclient.BadgrClient._call_api')
+    evidence = [{
+            'url': 'evidence.com',
+            'narrative': 'evidence narraive'
+        }]
+    Assertion(client).create(
+        'bc_eid',
+        'jane@mailg.com',
+        'test narrative',
+        evidence,
+        '2018-11-26T13:45:00Z',
+        '2022-11-26T13:45:00Z',
+    )
+    BadgrClient._call_api.assert_called_once_with(
+        '/v2/badgeclasses/bc_eid/assertions',
+        'POST',
+        data={
+            'recipient': {
+                'type': 'email',
+                'identity': 'jane@mailg.com',
+            },
+            'narrative': 'test narrative',
+            'evidence': evidence,
+            'expires': '2018-11-26T13:45:00Z',
+            'issuedOn': '2022-11-26T13:45:00Z',
+            'notify': True,
+        }
+    )

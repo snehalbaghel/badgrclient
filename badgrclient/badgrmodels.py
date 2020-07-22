@@ -89,7 +89,9 @@ class Assertion(Base):
             recipient_email,
             narrative=None,
             evidence=None,
-            notify=True
+            expires=None,
+            issued_on=None,
+            notify=True,
             ) -> 'Assertion':
         """Issue an Assetion to a single recipient
 
@@ -97,10 +99,15 @@ class Assertion(Base):
             badgeclass (string): entityId of the badgeclass to issue
             recipient_email (string): Email of the person to issue the badge
             narrative (string, optional): Describe how to badge was earned
-            evidence (dict { url (string), narrative (string) },
+            evidence (list[dict { url (string), narrative (string) }],
                 optional): Evidence to attach to this assertion,
+            expires (str, optional): The expiry date of the assertion
+                ISO8601 formated datetime
+            issued_on (str, optional): Override the issue date
+                ISO8601 formated datetime
             notify (bool, optional): Should the recipient be notified
         """
+        # TODO: add other types of recipient identifiers
         payload = {
             'recipient': {
                 'type': 'email',
@@ -108,7 +115,9 @@ class Assertion(Base):
             },
             'narrative': narrative,
             'evidence': evidence,
-            'notify': notify
+            'notify': notify,
+            'expires': expires,
+            'issuedOn': issued_on,
         }
 
         response = self.client._call_api(
@@ -161,13 +170,13 @@ class BadgeClass(Base):
             criteria_url (string, optional): Link of the criteria to earn the
             badge.
                 Defaults to None.
-            alignment (dict {
+            alignment (list[dict {
                     "targetName": "string",
                     "targetUrl": "string",
                     "targetDescription": "string",
                     "targetFramework": "string",
                     "targetCode": "string"
-                    } , optional): Alignments. Defaults to None.
+                    }] , optional): Alignments. Defaults to None.
             tags (list [string], optional): List of tags. Defaults to None.
             expires (dict {
                 "amount":	"string"
@@ -224,14 +233,20 @@ class BadgeClass(Base):
             recipient_email,
             narrative=None,
             evidence=None,
+            expires=None,
+            issued_on=None,
             notify=True) -> 'Assertion':
         """Create a new assertion of this badge
 
         Args:
             recipient_email (string): Email of the person to issue the badge
             narrative (string, optional): Describe how to badge was earned
-            evidence (dict { url (string), narrative (string) },
+            evidence (list[dict { url (string), narrative (string) }],
                 optional): Evidence to attach to this assertion,
+            expires (str, optional): The expiry date of the assertion
+                ISO8601 formated datetime
+            issued_on (str, optional): Override the issue date
+                ISO8601 formated datetime
             notify (bool, optional): Should the recipient be notified
         """
         new_assertion = Assertion(self.client).create(
@@ -239,6 +254,8 @@ class BadgeClass(Base):
             recipient_email,
             narrative,
             evidence,
+            expires,
+            issued_on,
             notify
         )
 
