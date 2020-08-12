@@ -29,6 +29,23 @@ def client(requests_mock):
     return client
 
 
+@pytest.fixture
+def unique_badge_client(requests_mock):
+    requests_mock.post(
+        TOKEN_URL,
+        text=get_mock_auth_text())
+
+    client = BadgrClient(
+        username='test',
+        password='test_pass',
+        client_id='kewl_client',
+        scope='rw:profile rw:issuer rw:backpack',
+        unique_badge_names=True
+        )
+
+    return client
+
+
 def test_client_init(client):
     """Test client instance is correctly created
     """
@@ -216,19 +233,19 @@ def test_create_badgeclass(client, mocker):
     )
 
 
-def test_issuer_fetch_assertions(client, mocker):
+def test_create_assertion(client, mocker):
     mocker.patch('badgrclient.BadgrClient._call_api')
     evidence = [{
             'url': 'evidence.com',
             'narrative': 'evidence narraive'
         }]
     Assertion(client).create(
-        'bc_eid',
         'jane@mailg.com',
-        'test narrative',
-        evidence,
-        '2018-11-26T13:45:00Z',
-        '2022-11-26T13:45:00Z',
+        badge_eid='bc_eid',
+        narrative='test narrative',
+        evidence=evidence,
+        expires='2018-11-26T13:45:00Z',
+        issued_on='2022-11-26T13:45:00Z',
     )
     BadgrClient._call_api.assert_called_once_with(
         '/v2/badgeclasses/bc_eid/assertions',
@@ -245,3 +262,29 @@ def test_issuer_fetch_assertions(client, mocker):
             'notify': True,
         }
     )
+
+# TODO
+
+
+def test_load_badge_names(unique_badge_client, requests_mock):
+    pass
+
+
+def test_get_eid_from_badge_name(unique_badge_client, requests_mock):
+    pass
+
+
+def test_create_assertion_with_badge_name(unique_badge_client, mocker):
+    pass
+
+
+def test_init_badgeclass_with_badge_name(unique_badge_client):
+    pass
+
+
+def test_create_badge_class_with_non_unique_name(unique_badge_client, mocker):
+    pass
+
+
+def test_fetch_badgeclasses_loads_badge_names(unique_badge_client):
+    pass

@@ -8,6 +8,7 @@ from .badgrmodels import (
     Issuer,
     )
 from typing import List, Union
+from .exceptions import APIError
 
 MODELS = {
     'Assertion': Assertion,
@@ -16,10 +17,6 @@ MODELS = {
 }
 
 Logger = logging.getLogger('badgrclient')
-
-
-class APIError(Exception):
-    pass
 
 
 class BadgrClient:
@@ -32,7 +29,8 @@ class BadgrClient:
         scope: str = 'rw:profile rw:issuer rw:backpack',
         base_url: str = 'http://localhost:8000',
         token: str = None,
-        refresh_token: str = None
+        refresh_token: str = None,
+        unique_badge_names: bool = False,
     ):
         """Initalize a new client
 
@@ -44,6 +42,10 @@ class BadgrClient:
             base_url: badgr-server's url. Defaults to 'http://localhost:8000'.
             token: Token to use for auth. Defaults to None.
             refresh_token: Refresh token to use for auth. Defaults to None.
+            unique_badge_names: Declares that badge_names per issuer are
+                unique and canbe used as a unique identifier for operations.
+                Call load_badge_names with appropriate issuer id after init
+                or only badges you create will get registered
         """
         self.session = requests.session()
         self.header = {}
@@ -52,6 +54,13 @@ class BadgrClient:
         self.scope = scope
         self.client_id = client_id
         self.base_url = base_url
+        self.unique_badge_names = unique_badge_names
+
+        if self.unique_badge_names:
+            # Make a dictonary to keep track of badgenames and entity IDs
+            # for each issuer
+            self.badge_names = {}
+
         if token:
             if not refresh_token:
                 raise APIError('For authentication with token, also provide a \
@@ -201,6 +210,57 @@ class BadgrClient:
             response = self._call_api(endpoint)
 
         return self._deserialize(response['result'])
+
+    def _save_badge_name(self, badge: BadgeClass):
+        """
+        Add a single badge to it's issuers list
+        Args:
+            badge (BadgeClass): Badge to save
+        """
+        eid = badge.entityId
+        badge_name = badge.data.get('name', None)
+        issuer_eid = badge.data.get('issuer', None)
+
+        if not (eid or badge_name or issuer_eid):
+            Logger.error(
+                'Unable to read badge while updating badge_name\
+                index: {}'.format(badge))
+            return
+
+        if not self.badge_names.get('issuer_eid', None):
+            self.badge_names[issuer_eid] = {}
+
+        self.badge_names[issuer_eid][badge_name] = eid
+
+    def load_badge_names(self, issuer_eid: str):
+        """
+        (Re)loads the badge name index for an issuer
+        Args:
+            issuer_eid (str): eid of the issuer
+        """
+        issuer = Issuer(self, issuer_eid)
+        issuers_badges = issuer.fetch_badgeclasses()
+
+        for badge in issuers_badges:
+            self._save_badge_name(badge)
+
+    def get_eid_from_badge_name(self, badge_name: str, issuer_eid: str):
+        """Get eid from badge name and in's issuer eid
+        Args:
+            badge_name (string): Name of badge.
+            issuer_eid (string): entityId of the the issuer badge belongs to
+        """
+        if not (badge_name or issuer_eid):
+            return None
+
+        badge_names = self.badge_names
+
+        if badge_names.get(issuer_eid, False) \
+                and badge_names[issuer_eid].get(
+                    badge_name, False):
+            return badge_names[issuer_eid][badge_name]
+
+        return None
 
     @staticmethod
     def encode_image(file: str):

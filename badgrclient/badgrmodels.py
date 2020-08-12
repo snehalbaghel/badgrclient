@@ -1,29 +1,23 @@
-import functools
 from abc import ABC
 from typing import List, cast
+from .util import eid_required
+import logging
+from .exceptions import BadgrClientError
 
-
-def eid_required(func):
-    @functools.wraps(func)
-    def check_id(self, *args, **kwargs):
-        if self.entityId:
-            return func(self, *args, **kwargs)
-        else:
-            raise Exception('entityId is required for this operation')
-
-    return check_id
+Logger = logging.getLogger('badgrclient')
 
 
 class Base(ABC):
-    def __init__(self, client):
+    def __init__(self, client, eid: str = None):
         """Base model class
 
         Args:
             client (BadgrClient): The BadgerClient instance to
             use for sending requests
+            eid (str, optional): the entityId of the entity
         """
         self.client = client
-        self.entityId = None
+        self.entityId = eid
         self.data = None
 
     def set_data(self, data):
@@ -85,8 +79,10 @@ class Assertion(Base):
 
     def create(
             self,
-            badgeclass,
             recipient_email,
+            badge_eid=None,
+            issuer_eid=None,
+            badge_name=None,
             narrative=None,
             evidence=None,
             expires=None,
@@ -96,7 +92,11 @@ class Assertion(Base):
         """Issue an Assetion to a single recipient
 
         Args:
-            badgeclass (string): entityId of the badgeclass to issue
+            badge_eid (string): entityId of the badgeclass to issue
+                Not required if issuer_eid and badge_name is given
+            badge_name (string): Name of badge. issuer_eid is also required if
+                using badge_name
+            issuer_eid (string): entityId of the the issuer badge belongs to
             recipient_email (string): Email of the person to issue the badge
             narrative (string, optional): Describe how to badge was earned
             evidence (list[dict { url (string), narrative (string) }],
@@ -120,8 +120,19 @@ class Assertion(Base):
             'issuedOn': issued_on,
         }
 
+        if not badge_eid and self.client.unique_badge_names:
+            badge_eid = self.client.get_eid_from_badge_name(
+                badge_name,
+                issuer_eid)
+
+        if not badge_eid:
+            error_msg = "Couldn't get badge_eid. If unique_badge_names is enabled \
+                you might need to call BadgrClient.load_badge_names(issuer)"
+            Logger.error(error_msg)
+            raise BadgrClientError(error_msg)
+
         response = self.client._call_api(
-            BadgeClass.ENDPOINT + '/{}/assertions'.format(badgeclass),
+            BadgeClass.ENDPOINT + '/{}/assertions'.format(badge_eid),
             'POST',
             data=payload)
 
@@ -146,6 +157,27 @@ class Assertion(Base):
 class BadgeClass(Base):
 
     ENDPOINT = '/v2/badgeclasses'
+
+    def __init__(
+        self,
+        client,
+        eid: str = None,
+        badge_name: str = None,
+        issuer_eid: str = None,
+    ):
+        super().__init__(client, eid)
+        client = self.client
+
+        # if unique_badge_names is True then
+        # search for the badge_name and set eid
+        # ignore if can't find
+        if not client.unique_badge_names:
+            return
+
+        entityId = self.client.get_eid_from_badge_name(badge_name, issuer_eid)
+
+        if entityId:
+            self.entityId = entityId
 
     def create(
         self,
@@ -202,11 +234,27 @@ class BadgeClass(Base):
             'expires': expires,
         }
 
+        # if badgename is not unique with unique_badge_names=True
+        # throw an exception
+        unique_badge_names = self.client.unique_badge_names
+        if unique_badge_names:
+            badge_exists = self.client.get_eid_from_badge_name(
+                name, issuer_eid)
+            if badge_exists:
+                error_msg = 'BadgeClas name {} is not unique. {} exists with \
+                    the same name'.format(name, badge_exists)
+                Logger.error(error_msg)
+                raise BadgrClientError(error_msg)
+
         response = self.client._call_api(
             BadgeClass.ENDPOINT,
             'POST',
             data=payload)
+
         self.set_data(response['result'][0])
+
+        if unique_badge_names:
+            self.client._save_badge_name(self)
 
         return self
 
@@ -250,13 +298,13 @@ class BadgeClass(Base):
             notify (bool, optional): Should the recipient be notified
         """
         new_assertion = Assertion(self.client).create(
-            self.entityId,
-            recipient_email,
-            narrative,
-            evidence,
-            expires,
-            issued_on,
-            notify
+            recipient_email=recipient_email,
+            badge_eid=self.entityId,
+            narrative=narrative,
+            evidence=evidence,
+            expires=expires,
+            issued_on=issued_on,
+            notify=notify
         )
 
         return new_assertion
@@ -304,8 +352,13 @@ class Issuer(Base):
         return result
 
     @eid_required
-    def fetch_badgeclasses(self) -> List[BadgeClass]:
+    def fetch_badgeclasses(self, load_badge_names: bool = True) -> \
+            List[BadgeClass]:
         """Get a list of BadgeClasses for this issuer
+        Args:
+            load_badge_names (bool):
+                Should the fetched data be used to load badge names
+                if unique_badge_names is True
         """
         ep = Issuer.ENDPOINT + '/{}/badgeclasses'.format(self.entityId)
         response = self.client._call_api(ep)
@@ -313,6 +366,10 @@ class Issuer(Base):
             List[BadgeClass],
             self.client._deserialize(response['result'])
         )
+
+        if load_badge_names and self.client.unique_badge_names:
+            for badge in result:
+                self.client._save_badge_name(badge)
 
         return result
 
