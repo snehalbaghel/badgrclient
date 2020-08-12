@@ -5,7 +5,8 @@ from pathlib import Path
 
 
 TOKEN_URL = 'http://localhost:8000/o/token'
-TEST_IMAGE_PATH = str(Path('tests/test_image.png'))
+TEST_IMAGE_PATH_PNG = str(Path('tests/test_image.png'))
+TEST_IMAGE_PATH_SVG = str(Path('tests/test_image.svg'))
 
 
 def get_mock_auth_text(token: str = 'mock_token', expiry: int = 86400):
@@ -92,7 +93,8 @@ def test_fetch_tokens(client, mocker):
 
 fetch_assertion_params = [
     (None, '/v2/backpack/assertions'),
-    ('abcd', '/v2/assertions/abcd')]
+    ('abcd', '/v2/assertions/abcd')
+]
 
 
 @pytest.mark.parametrize("eid, expected", fetch_assertion_params)
@@ -179,9 +181,16 @@ def test_create_user(client, mocker):
     )
 
 
-def test_encode_image(client):
-    encoded_string = client.encode_image(TEST_IMAGE_PATH)
-    assert encoded_string == 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Ng+M9QDwADgQF/iwmQSQAAAABJRU5ErkJggg=='  # noqa: E501
+encode_image_args = [
+    (TEST_IMAGE_PATH_PNG, 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2Ng+M9QDwADgQF/iwmQSQAAAABJRU5ErkJggg=='),  # noqa: E501
+    (TEST_IMAGE_PATH_SVG, 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/Pgo8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDIwMDEwOTA0Ly9FTiIKICJodHRwOi8vd3d3LnczLm9yZy9UUi8yMDAxL1JFQy1TVkctMjAwMTA5MDQvRFREL3N2ZzEwLmR0ZCI+CjxzdmcgdmVyc2lvbj0iMS4wIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiB3aWR0aD0iMS4wMDAwMDBwdCIgaGVpZ2h0PSIxLjAwMDAwMHB0IiB2aWV3Qm94PSIwIDAgMS4wMDAwMDAgMS4wMDAwMDAiCiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBtZWV0Ij4KPG1ldGFkYXRhPgpDcmVhdGVkIGJ5IHBvdHJhY2UgMS4xNiwgd3JpdHRlbiBieSBQZXRlciBTZWxpbmdlciAyMDAxLTIwMTkKPC9tZXRhZGF0YT4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMC4wMDAwMDAsMS4wMDAwMDApIHNjYWxlKDAuMTAwMDAwLC0wLjEwMDAwMCkiCmZpbGw9IiMwMDAwMDAiIHN0cm9rZT0ibm9uZSI+CjwvZz4KPC9zdmc+Cg==')  # noqa: E501
+]
+
+
+@pytest.mark.parametrize("image_path, expected", encode_image_args)
+def test_encode_image(client, image_path, expected):
+    encoded_string = client.encode_image(image_path)
+    assert encoded_string == expected
 
 
 def test_create_issuer(client, mocker):
@@ -191,7 +200,7 @@ def test_create_issuer(client, mocker):
         'Fedora Issuer',
         'test@fedoraproject.org',
         'http://fegora.org',
-        client.encode_image(TEST_IMAGE_PATH)
+        client.encode_image(TEST_IMAGE_PATH_PNG)
     )
     BadgrClient._call_api.assert_called_once_with(
         '/v2/issuers',
@@ -210,7 +219,7 @@ def test_create_badgeclass(client, mocker):
     mocker.patch('badgrclient.BadgrClient._call_api')
     BadgeClass(client).create(
         'Speak Up!',
-        client.encode_image(TEST_IMAGE_PATH),
+        client.encode_image(TEST_IMAGE_PATH_PNG),
         'Participated in an IRC meeting.',
         'aeIo_u',
         criteria_url='https://github.com/dtgay/badges/blob/master/docs/badges.rst',

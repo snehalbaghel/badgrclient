@@ -8,12 +8,17 @@ from .badgrmodels import (
     Issuer,
     )
 from typing import List, Union
-from .exceptions import APIError
+from .exceptions import APIError, BadgrClientError
 
 MODELS = {
     'Assertion': Assertion,
     'BadgeClass': BadgeClass,
     'Issuer': Issuer,
+}
+
+IMAGE_MIME_TYPES = {
+    'svg': 'image/svg+xml',
+    'png': 'image/png',
 }
 
 Logger = logging.getLogger('badgrclient')
@@ -63,7 +68,7 @@ class BadgrClient:
 
         if token:
             if not refresh_token:
-                raise APIError('For authentication with token, also provide a \
+                raise BadgrClientError('For authentication with token, also provide a \
                     refresh token')
             self.header = {'Authorization': 'Bearer {}'.format(token)}
         else:
@@ -269,9 +274,16 @@ class BadgrClient:
         Args:
             file (str): the path to file
         """
+        extension = file.split('.')[-1]
+        mime_type = IMAGE_MIME_TYPES[extension]
+
+        if not mime_type:
+            raise BadgrClientError('Image format {} not \
+                supported'.format(extension))
+
         with open(file, 'rb') as img_f:
-            encoded_string = 'data:image/{};base64,{}'.format(
-                file.split('.')[-1],
+            encoded_string = 'data:{};base64,{}'.format(
+                mime_type,
                 base64.b64encode(img_f.read()).decode('utf8'),
             )
 
