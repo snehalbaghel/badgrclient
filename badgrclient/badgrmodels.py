@@ -187,7 +187,7 @@ class BadgeClass(Base):
         issuer_eid,
         criteria_text=None,
         criteria_url=None,
-        alignment=None,
+        alignments=None,
         tags=None,
         expires=None
     ) -> 'BadgeClass':
@@ -202,7 +202,7 @@ class BadgeClass(Base):
             criteria_url (string, optional): Link of the criteria to earn the
             badge.
                 Defaults to None.
-            alignment (list[dict {
+            alignments (list[dict {
                     "targetName": "string",
                     "targetUrl": "string",
                     "targetDescription": "string",
@@ -229,7 +229,7 @@ class BadgeClass(Base):
             'description': description,
             'criteria_text': criteria_text,
             'criteria_url': criteria_url,
-            'alignments': alignment if alignment else [],
+            'alignments': alignments if alignments else [],
             'tags': tags if tags else [],
             'expires': expires,
         }
