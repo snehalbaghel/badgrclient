@@ -158,9 +158,9 @@ def test_revoke_assertions(client, mocker):
         }])
 
 
-def test_create_user(client, mocker):
+def test_v1_create_user(client, mocker):
     mocker.patch('badgrclient.BadgrClient._call_api')
-    client.create_user(
+    client._v1_create_user(
         'Jane',
         'Doe',
         'jane@gmail.com',

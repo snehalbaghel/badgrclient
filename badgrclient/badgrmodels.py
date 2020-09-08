@@ -1,8 +1,9 @@
 from abc import ABC
+from datetime import datetime
+from .exceptions import BadgrClientError
+import logging
 from typing import List, cast
 from .util import eid_required
-import logging
-from .exceptions import BadgrClientError
 
 Logger = logging.getLogger('badgrclient')
 
@@ -114,10 +115,11 @@ class Assertion(Base):
                 'identity': recipient_email,
             },
             'narrative': narrative,
-            'evidence': evidence,
+            'evidence': evidence or [],
             'notify': notify,
             'expires': expires,
-            'issuedOn': issued_on,
+            'issuedOn': issued_on or datetime.utcnow().strftime(
+                '%Y-%m-%d %H:%M:%SZ'),
         }
 
         if not badge_eid and self.client.unique_badge_names:

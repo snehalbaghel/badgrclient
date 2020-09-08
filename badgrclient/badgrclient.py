@@ -48,7 +48,7 @@ class BadgrClient:
             token: Token to use for auth. Defaults to None.
             refresh_token: Refresh token to use for auth. Defaults to None.
             unique_badge_names: Declares that badge_names per issuer are
-                unique and canbe used as a unique identifier for operations.
+                unique and can be used as a unique identifier for operations.
                 Call load_badge_names with appropriate issuer id after init
                 or only badges you create will get registered
         """
@@ -344,7 +344,8 @@ class BadgrClient:
         """
         return self._fetch_id_or_self('/v2/backpack/collections', eid)
 
-    def revoke_assertions(self, ids, reason='Revoked by badgerclient'):
+    def revoke_assertions(self, ids: List[str],
+                          reason='Revoked by badgerclient'):
         """Revoke multiple assertions
 
         Args:
@@ -362,7 +363,7 @@ class BadgrClient:
 
         return self._call_api('/v2/assertions/revoke', 'POST', data=payload)
 
-    def create_user(
+    def _v1_create_user(
         self,
         first_name: str,
         last_name: str,
