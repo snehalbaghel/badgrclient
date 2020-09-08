@@ -261,7 +261,8 @@ class BadgeClass(Base):
         return self
 
     @eid_required
-    def fetch_assertions(self, recipient=None, num=None) -> List[Assertion]:
+    def fetch_assertions(self, recipient=None, num=None,
+                         query=None) -> List[Assertion]:
         """
         Get a list of Assertions for this badgeclass
 
@@ -269,9 +270,10 @@ class BadgeClass(Base):
             recipient (string, optional): Filter by recipient
             num (string, optional): Request pagination
                 of results
+            query (dict, optional): Query params
         """
         ep = BadgeClass.ENDPOINT + '/{}/assertions'.format(self.entityId)
-        response = self.client._call_api(ep)
+        response = self.client._call_api(ep, params=query)
         result = cast(
             List[Assertion],
             self.client._deserialize(response['result']))
@@ -342,11 +344,13 @@ class Issuer(Base):
         return self
 
     @eid_required
-    def fetch_assertions(self) -> List[Assertion]:
+    def fetch_assertions(self, query=None) -> List[Assertion]:
         """Get list of assertions for this issuer
+        Args:
+            query (dict, optional): Query params
         """
         ep = Issuer.ENDPOINT + '/{}/assertions'.format(self.entityId)
-        response = self.client._call_api(ep)
+        response = self.client._call_api(ep, params=query)
         result = cast(
             List[Assertion],
             self.client._deserialize(response['result']))
@@ -354,16 +358,17 @@ class Issuer(Base):
         return result
 
     @eid_required
-    def fetch_badgeclasses(self, load_badge_names: bool = True) -> \
-            List[BadgeClass]:
+    def fetch_badgeclasses(self, load_badge_names: bool = True,
+                           query=None) -> List[BadgeClass]:
         """Get a list of BadgeClasses for this issuer
         Args:
             load_badge_names (bool):
                 Should the fetched data be used to load badge names
                 if unique_badge_names is True
+            query (dict, optional): Query params
         """
         ep = Issuer.ENDPOINT + '/{}/badgeclasses'.format(self.entityId)
-        response = self.client._call_api(ep)
+        response = self.client._call_api(ep, params=query)
         result = cast(
             List[BadgeClass],
             self.client._deserialize(response['result'])
