@@ -272,6 +272,15 @@ def test_create_assertion(client, mocker):
         }
     )
 
+
+def test_badgeclass_fetch_assertion(client, mocker):
+    mocker.patch('badgrclient.BadgrClient._call_api')
+    test_badge = BadgeClass(client, eid='s0ziri1LRpyrZs6cNQVnHw')
+    test_badge.fetch_assertions('test_email@dummy.com')
+    BadgrClient._call_api.assert_called_once_with(
+        '/v2/badgeclasses/s0ziri1LRpyrZs6cNQVnHw/assertions',
+        params={'recipient': 'test_email@dummy.com'})
+
 # TODO
 
 

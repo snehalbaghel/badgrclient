@@ -273,6 +273,12 @@ class BadgeClass(Base):
             query (dict, optional): Query params
         """
         ep = BadgeClass.ENDPOINT + '/{}/assertions'.format(self.entityId)
+        if recipient:
+            if not query:
+                query = {}
+
+            query['recipient'] = recipient
+
         response = self.client._call_api(ep, params=query)
         result = cast(
             List[Assertion],
