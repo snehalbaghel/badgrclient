@@ -17,8 +17,10 @@ def get_requires(test=None):
 setuptools.setup(
     name="badgrclient",
     packages=["badgrclient"],
-    version="0.1",
+    version="0.1.1",
     description="A python library for Badgr APIs",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="Snehal Baghel",
     author_email="snehalbaghel@gmail.com",
     url="https://github.com/snehalbaghel/badgrclient",
