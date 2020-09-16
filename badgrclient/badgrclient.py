@@ -6,33 +6,32 @@ from .badgrmodels import (
     Assertion,
     BadgeClass,
     Issuer,
-    )
+)
 from typing import List, Union
 from .exceptions import APIError, BadgrClientError
 
 MODELS = {
-    'Assertion': Assertion,
-    'BadgeClass': BadgeClass,
-    'Issuer': Issuer,
+    "Assertion": Assertion,
+    "BadgeClass": BadgeClass,
+    "Issuer": Issuer,
 }
 
 IMAGE_MIME_TYPES = {
-    'svg': 'image/svg+xml',
-    'png': 'image/png',
+    "svg": "image/svg+xml",
+    "png": "image/png",
 }
 
-Logger = logging.getLogger('badgrclient')
+Logger = logging.getLogger("badgrclient")
 
 
 class BadgrClient:
-
     def __init__(
         self,
         username: str = None,
         password: str = None,
         client_id: str = None,
-        scope: str = 'rw:profile rw:issuer rw:backpack',
-        base_url: str = 'http://localhost:8000',
+        scope: str = "rw:profile rw:issuer rw:backpack",
+        base_url: str = "http://localhost:8000",
         token: str = None,
         refresh_token: str = None,
         unique_badge_names: bool = False,
@@ -68,19 +67,17 @@ class BadgrClient:
 
         if token:
             if not refresh_token:
-                raise BadgrClientError('For authentication with token, also provide a \
-                    refresh token')
-            self.header = {'Authorization': 'Bearer {}'.format(token)}
+                raise BadgrClientError(
+                    "For authentication with token, also provide a \
+                    refresh token"
+                )
+            self.header = {"Authorization": "Bearer {}".format(token)}
         else:
             self._get_auth_token(username, password)
 
     def _call_api(
-            self,
-            endpoint,
-            method='GET',
-            params=None,
-            data=None,
-            auth=True) -> dict:
+        self, endpoint, method="GET", params=None, data=None, auth=True
+    ) -> dict:
         """Method used to call the API.
         It returns the raw JSON returned by the API or raises an exception
         if something goes wrong.
@@ -100,8 +97,8 @@ class BadgrClient:
         url = self.base_url + endpoint
         header = self.header
 
-        if not auth and 'Authorization' in header:
-            header.pop('Authorization')
+        if not auth and "Authorization" in header:
+            header.pop("Authorization")
 
         req = self.session.request(
             method=method,
@@ -126,18 +123,18 @@ class BadgrClient:
             response = req.json()
         except Exception as err:
             Logger.debug(req.text)
-            raise APIError('Error while decoding JSON: {0}'.format(err))
+            raise APIError("Error while decoding JSON: {0}".format(err))
 
         if req.status_code >= 300:
             Logger.error(response)
-            if 'error' in response:
-                raise APIError(response['error'])
+            if "error" in response:
+                raise APIError(response["error"])
 
-        if 'status' in response:
-            if not response['status']['success']:
+        if "status" in response:
+            if not response["status"]["success"]:
                 Logger.error(response)
-                if 'description' in response['status']:
-                    raise APIError(response['status']['description'])
+                if "description" in response["status"]:
+                    raise APIError(response["status"]["description"])
 
         return response
 
@@ -152,37 +149,34 @@ class BadgrClient:
         now = datetime.datetime.now()
 
         payload = {
-            'client_id': self.client_id,
+            "client_id": self.client_id,
         }
 
         if self.scope:
-            payload['scope'] = self.scope
+            payload["scope"] = self.scope
 
         if username and password:
-            payload['username'] = username
-            payload['password'] = password
-            payload['grant_type'] = 'password'
+            payload["username"] = username
+            payload["password"] = password
+            payload["grant_type"] = "password"
         elif self.refresh_token:
-            payload['refresh_token'] = self.refresh_token
-            payload['grant_type'] = 'refresh_token'
+            payload["refresh_token"] = self.refresh_token
+            payload["grant_type"] = "refresh_token"
             self.refresh_token = None
 
-        req = requests.post(
-            self.base_url + '/o/token',
-            data=payload
-        )
+        req = requests.post(self.base_url + "/o/token", data=payload)
 
         response = self._get_json(req)
 
         self.token_expires_at = now + datetime.timedelta(
-            seconds=response['expires_in'])
-        self.refresh_token = response['refresh_token']
-        self.header = {
-            "Authorization": "Bearer " + response['access_token']
-        }
+            seconds=response["expires_in"]
+        )
+        self.refresh_token = response["refresh_token"]
+        self.header = {"Authorization": "Bearer " + response["access_token"]}
 
-    def _deserialize(self, result: list) -> List[
-            Union[BadgeClass, Assertion, Issuer]]:
+    def _deserialize(
+        self, result: list
+    ) -> List[Union[BadgeClass, Assertion, Issuer]]:
         """
             Get the appropriate model instances list from result list
         Args:
@@ -192,10 +186,9 @@ class BadgrClient:
         return_value = []
 
         for i in result:
-            entityType = i['entityType']
+            entityType = i["entityType"]
             if MODELS[entityType]:
-                return_value.append(
-                    MODELS[entityType](self).set_data(i))
+                return_value.append(MODELS[entityType](self).set_data(i))
             else:
                 return_value.append(i)
 
@@ -209,12 +202,12 @@ class BadgrClient:
             eid ([type]): entityId
         """
         if eid:
-            ep = endpoint + '/{}'.format(eid)
+            ep = endpoint + "/{}".format(eid)
             response = self._call_api(ep)
         else:
             response = self._call_api(endpoint)
 
-        return self._deserialize(response['result'])
+        return self._deserialize(response["result"])
 
     def _save_badge_name(self, badge: BadgeClass):
         """
@@ -223,16 +216,19 @@ class BadgrClient:
             badge (BadgeClass): Badge to save
         """
         eid = badge.entityId
-        badge_name = badge.data.get('name', None)
-        issuer_eid = badge.data.get('issuer', None)
+        badge_name = badge.data.get("name", None)
+        issuer_eid = badge.data.get("issuer", None)
 
         if not (eid or badge_name or issuer_eid):
             Logger.error(
-                'Unable to read badge while updating badge_name\
-                index: {}'.format(badge))
+                "Unable to read badge while updating badge_name\
+                index: {}".format(
+                    badge
+                )
+            )
             return
 
-        if not self.badge_names.get('issuer_eid', None):
+        if not self.badge_names.get(issuer_eid, None):
             self.badge_names[issuer_eid] = {}
 
         self.badge_names[issuer_eid][badge_name] = eid
@@ -244,7 +240,9 @@ class BadgrClient:
             issuer_eid (str): eid of the issuer
         """
         issuer = Issuer(self, issuer_eid)
-        issuers_badges = issuer.fetch_badgeclasses()
+        issuers_badges = issuer.fetch_badgeclasses(
+            load_badge_names=False
+        )  # We will load it ourselves
 
         for badge in issuers_badges:
             self._save_badge_name(badge)
@@ -260,9 +258,9 @@ class BadgrClient:
 
         badge_names = self.badge_names
 
-        if badge_names.get(issuer_eid, False) \
-                and badge_names[issuer_eid].get(
-                    badge_name, False):
+        if badge_names.get(issuer_eid, False) and badge_names[issuer_eid].get(
+            badge_name, False
+        ):
             return badge_names[issuer_eid][badge_name]
 
         return None
@@ -274,25 +272,28 @@ class BadgrClient:
         Args:
             file (str): the path to file
         """
-        extension = file.split('.')[-1]
+        extension = file.split(".")[-1]
         mime_type = IMAGE_MIME_TYPES[extension]
 
         if not mime_type:
-            raise BadgrClientError('Image format {} not \
-                supported'.format(extension))
+            raise BadgrClientError(
+                "Image format {} not \
+                supported".format(
+                    extension
+                )
+            )
 
-        with open(file, 'rb') as img_f:
-            encoded_string = 'data:{};base64,{}'.format(
+        with open(file, "rb") as img_f:
+            encoded_string = "data:{};base64,{}".format(
                 mime_type,
-                base64.b64encode(img_f.read()).decode('utf8'),
+                base64.b64encode(img_f.read()).decode("utf8"),
             )
 
             return encoded_string
 
     def fetch_tokens(self):
-        """Get a list of access tokens for authenticated user
-        """
-        response = self._call_api('/v2/auth/tokens')
+        """Get a list of access tokens for authenticated user"""
+        response = self._call_api("/v2/auth/tokens")
         return response.result
 
     def fetch_assertion(self, eid=None) -> List[Assertion]:
@@ -305,13 +306,13 @@ class BadgrClient:
         """
 
         if eid:
-            ep = Assertion.ENDPOINT + '/{}'.format(eid)
+            ep = Assertion.ENDPOINT + "/{}".format(eid)
         else:
-            ep = '/v2/backpack/assertions'
+            ep = "/v2/backpack/assertions"
 
         response = self._call_api(ep)
 
-        return self._deserialize(response['result'])
+        return self._deserialize(response["result"])
 
     def fetch_badgeclass(self, eid=None) -> List[BadgeClass]:
         """
@@ -342,10 +343,11 @@ class BadgrClient:
             eid (string, optional): entityId of the entity to fetch.
             Defaults to None.
         """
-        return self._fetch_id_or_self('/v2/backpack/collections', eid)
+        return self._fetch_id_or_self("/v2/backpack/collections", eid)
 
-    def revoke_assertions(self, ids: List[str],
-                          reason='Revoked by badgerclient'):
+    def revoke_assertions(
+        self, ids: List[str], reason="Revoked by badgerclient"
+    ):
         """Revoke multiple assertions
 
         Args:
@@ -356,12 +358,9 @@ class BadgrClient:
         payload = []
 
         for eid in ids:
-            payload.append({
-                'entityId': eid,
-                'revocationReason': reason
-            })
+            payload.append({"entityId": eid, "revocationReason": reason})
 
-        return self._call_api('/v2/assertions/revoke', 'POST', data=payload)
+        return self._call_api("/v2/assertions/revoke", "POST", data=payload)
 
     def _v1_create_user(
         self,
@@ -374,22 +373,22 @@ class BadgrClient:
     ):
 
         if not email:
-            raise Exception('Email is required to make an account')
+            raise Exception("Email is required to make an account")
 
         if not password:
-            raise Exception('Password is required to make an account')
+            raise Exception("Password is required to make an account")
 
         payload = {
-            'first_name': first_name,
-            'last_name': last_name,
-            'email': email,
-            'password': password,
-            'marketing_opt_in': marketing_opt_in,
-            'agreed_terms_service': agreed_terms_service
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email,
+            "password": password,
+            "marketing_opt_in": marketing_opt_in,
+            "agreed_terms_service": agreed_terms_service,
         }
 
         response = self._call_api(
-            '/v1/user/profile', 'POST', data=payload,
-            auth=False)
+            "/v1/user/profile", "POST", data=payload, auth=False
+        )
 
         return response
