@@ -1,5 +1,5 @@
 # BadgrClient
-_A python library for Badgr APIs_
+_A python library for [Badgr](https://github.com/concentricsky/badgr-server) APIs_
 
 
 ## Usage
