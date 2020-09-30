@@ -10,6 +10,13 @@ from .badgrmodels import (
 from typing import List, Union
 from .exceptions import APIError, BadgrClientError
 
+from os.path import join, dirname
+from dotenv import load_dotenv
+from os import getenv
+
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+
 MODELS = {
     "Assertion": Assertion,
     "BadgeClass": BadgeClass,
@@ -27,8 +34,8 @@ Logger = logging.getLogger("badgrclient")
 class BadgrClient:
     def __init__(
         self,
-        username: str = None,
-        password: str = None,
+        username: str = getenv('USERNAME'),
+        password: str = getenv('PASSWORD'),
         client_id: str = None,
         scope: str = "rw:profile rw:issuer rw:backpack",
         base_url: str = "http://localhost:8000",
@@ -39,8 +46,8 @@ class BadgrClient:
         """Initalize a new client
 
         Args:
-            username: Badgr username(or email). Defaults to None.
-            password: Badgr password. Defaults to None.
+            username: Badgr username(or email). Defaults to USERNAME from .env file.
+            password: Badgr password. Defaults to PASSWORD from .env file.
             client_id: client_id to use to connect to badgr. Defaults to None.
             scope: OAuth Scope. Defaults to None.
             base_url: badgr-server's url. Defaults to 'http://localhost:8000'.
