@@ -3,3 +3,6 @@ flake8
 pytest
 pytest-mock
 requests-mock
+# For docs
+sphinx
+m2r2

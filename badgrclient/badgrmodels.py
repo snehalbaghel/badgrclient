@@ -13,8 +13,7 @@ class Base(ABC):
         """Base model class
 
         Args:
-            client (BadgrClient): The BadgerClient instance to
-            use for sending requests
+            client (BadgrClient): The BadgerClient instance to use for sending requests
             eid (str, optional): the entityId of the entity
         """
         self.client = client
@@ -39,8 +38,9 @@ class Base(ABC):
     @eid_required
     def delete(self) -> dict:
         """Delete entity
+
         Returns:
-            Response dict
+            dict: Response dict
         """
         ep = self.get_entity_ep()
         response = self.client._call_api(ep, "DELETE")
@@ -50,8 +50,9 @@ class Base(ABC):
     @eid_required
     def update(self) -> dict:
         """Update entity
+
         Returns:
-            Response dict
+            dict: Response dict
         """
         ep = self.get_entity_ep()
         response = self.client._call_api(ep, "PUT", data=self.data)
@@ -101,11 +102,17 @@ class Assertion(Base):
             narrative (string, optional): Describe how to badge was earned
             evidence (list[dict { url (string), narrative (string) }],
                 optional): Evidence to attach to this assertion,
-            expires (str, optional): The expiry date of the assertion
-                ISO8601 formated datetime
-            issued_on (str, optional): Override the issue date
-                ISO8601 formated datetime
+            expires (str, optional): The expiry date of the assertion (ISO8601 formated
+                datetime)
+            issued_on (str, optional): Override the issue date (ISO8601 formated datetime)
             notify (bool, optional): Should the recipient be notified
+
+        Raises:
+            BadgrClientError: Couldn't get eid/ Eid not provided
+
+        Note:
+            You can indentify the badge either by providing eid or if unique_badge_names
+            is enabled in your client then by providing issuer_eid and badge_name
         """
         # TODO: add other types of recipient identifiers
         payload = {
@@ -145,8 +152,10 @@ class Assertion(Base):
     @eid_required
     def revoke(self, reason) -> dict:
         """Revoke this assertion
+
         Args:
             reason (string): Reason of revocation
+
         Returns:
             dict: API response dict
         """
@@ -216,9 +225,12 @@ class BadgeClass(Base):
                 "amount":	"string"
                 "duration":	"string"
                 }, optional): Expiry of the badge. Defaults to None.
+
         Raises:
-            Exception: At least one of criteria_text and \
+            BadgrClientError: At least one of criteria_text and \
                 criteria_url is required's
+            BadgrClientError: Badgeclass name is not unique (if unique_badge_names is
+                enabled)
         """
         if not (criteria_text or criteria_url):
             raise BadgrClientError(
@@ -246,7 +258,7 @@ class BadgeClass(Base):
                 name, issuer_eid
             )
             if badge_exists:
-                error_msg = "BadgeClas name {} is not unique. {} exists with \
+                error_msg = "BadgeClass name {} is not unique. {} exists with \
                     the same name".format(
                     name, badge_exists
                 )
@@ -374,11 +386,14 @@ class Issuer(Base):
         self, load_badge_names: bool = True, query=None
     ) -> List[BadgeClass]:
         """Get a list of BadgeClasses for this issuer
+
         Args:
-            load_badge_names (bool):
-                Should the fetched data be used to load badge names
-                if unique_badge_names is True
-            query (dict, optional): Query params
+            load_badge_names (bool, optional): Should the fetched data be used
+                to load badge names if unique_badge_names is True. Defaults to True.
+            query (dict, optional):  Query params. Defaults to None.
+
+        Returns:
+            List[BadgeClass]: [description]
         """
         ep = Issuer.ENDPOINT + "/{}/badgeclasses".format(self.entityId)
         response = self.client._call_api(ep, params=query)
@@ -425,8 +440,9 @@ class Issuer(Base):
                 "amount":	"string"
                 "duration":	"string"
                 }, optional): Expiry of the badge. Defaults to None.
+
         Raises:
-            Exception: At least one of criteria_text and \
+            BadgrClientError: At least one of criteria_text and \
                 criteria_url is required's
         """
         badge_class = BadgeClass(self.client).create(
@@ -451,15 +467,19 @@ class Issuer(Base):
             action (str): One of 'add', 'modify' or 'remove'
             email (str): Email of the staff
             role (str): One of 'owner', 'editor', or 'staff'
+
+        Raises:
+            BadgrClientError: Action must be one of 'add', 'modify' or 'remove'
+            BadgrClientError: Action must be one of 'owner', 'editor', or 'staff'
         """
 
         if action not in ["add", "modify", "remove"]:
-            raise Exception(
+            raise BadgrClientError(
                 "Action must be one of 'add', 'modify' or 'remove'"
             )
 
         if role not in ["owner", "editor", "staff"]:
-            raise Exception(
+            raise BadgrClientError(
                 "Action must be one of 'owner', 'editor', or 'staff'"
             )
 

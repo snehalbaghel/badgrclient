@@ -27,29 +27,34 @@ Logger = logging.getLogger("badgrclient")
 class BadgrClient:
     def __init__(
         self,
-        username: str = None,
-        password: str = None,
-        client_id: str = None,
+        username: str,
+        password: str,
+        client_id: str,
         scope: str = "rw:profile rw:issuer rw:backpack",
         base_url: str = "http://localhost:8000",
         token: str = None,
         refresh_token: str = None,
         unique_badge_names: bool = False,
     ):
-        """Initalize a new client
+        """
+        Initalize a new client
 
         Args:
-            username: Badgr username(or email). Defaults to None.
-            password: Badgr password. Defaults to None.
-            client_id: client_id to use to connect to badgr. Defaults to None.
-            scope: OAuth Scope. Defaults to None.
-            base_url: badgr-server's url. Defaults to 'http://localhost:8000'.
-            token: Token to use for auth. Defaults to None.
-            refresh_token: Refresh token to use for auth. Defaults to None.
-            unique_badge_names: Declares that badge_names per issuer are
-                unique and can be used as a unique identifier for operations.
-                Call load_badge_names with appropriate issuer id after init
-                or only badges you create will get registered
+            username (str): Badgr username(or email). Defaults to None.
+            password (str): Badgr password. Defaults to None.
+            client_id (str): client_id to use to connect to badgr. Defaults to None.
+            scope (str): OAuth Scope. Defaults to None.
+            base_url (str): badgr-server's url. Defaults to 'http://localhost:8000'.
+            token (str): Token to use for auth. Defaults to None.
+            refresh_token (str): Refresh token to use for auth. Defaults to None.
+            unique_badge_names (str): Declares that badge_names per issuer are unique and
+                can be used as a unique identifier for operations.
+
+        Note:
+            If unique_badge_names is set to True call
+            :func:`~badgrclient.badgrclient.BadgrClient.load_badge_names` with appropriate
+            issuer id after init or only badges you create will get registered
+
         """
         self.session = requests.session()
         self.header = {}
@@ -67,6 +72,7 @@ class BadgrClient:
 
         if token:
             if not refresh_token:
+                # Remove this after relogin bug is fixed
                 raise BadgrClientError(
                     "For authentication with token, also provide a \
                     refresh token"
@@ -81,6 +87,7 @@ class BadgrClient:
         """Method used to call the API.
         It returns the raw JSON returned by the API or raises an exception
         if something goes wrong.
+
         Args:
             endpoint: the endpoint to call
             method: the HTTP method to use when calling the specified
@@ -179,9 +186,9 @@ class BadgrClient:
     ) -> List[Union[BadgeClass, Assertion, Issuer]]:
         """
             Get the appropriate model instances list from result list
+
         Args:
             result: The result in the payload
-
         """
         return_value = []
 
@@ -212,6 +219,7 @@ class BadgrClient:
     def _save_badge_name(self, badge: BadgeClass):
         """
         Add a single badge to it's issuers list
+
         Args:
             badge (BadgeClass): Badge to save
         """
@@ -236,6 +244,7 @@ class BadgrClient:
     def load_badge_names(self, issuer_eid: str):
         """
         (Re)loads the badge name index for an issuer
+
         Args:
             issuer_eid (str): eid of the issuer
         """
@@ -249,6 +258,7 @@ class BadgrClient:
 
     def get_eid_from_badge_name(self, badge_name: str, issuer_eid: str):
         """Get eid from badge name and in's issuer eid
+
         Args:
             badge_name (string): Name of badge.
             issuer_eid (string): entityId of the the issuer badge belongs to
@@ -266,13 +276,17 @@ class BadgrClient:
         return None
 
     @staticmethod
-    def encode_image(file: str):
+    def encode_image(file_path: str):
         """
         Encode file to base64 data-uri string
+
         Args:
-            file (str): the path to file
+            file_path (str): the path to file
+
+        Raises:
+            BadgrClientError: Image format not supported
         """
-        extension = file.split(".")[-1]
+        extension = file_path.split(".")[-1]
         mime_type = IMAGE_MIME_TYPES[extension]
 
         if not mime_type:
@@ -283,7 +297,7 @@ class BadgrClient:
                 )
             )
 
-        with open(file, "rb") as img_f:
+        with open(file_path, "rb") as img_f:
             encoded_string = "data:{};base64,{}".format(
                 mime_type,
                 base64.b64encode(img_f.read()).decode("utf8"),
@@ -293,6 +307,7 @@ class BadgrClient:
 
     def fetch_tokens(self):
         """Get a list of access tokens for authenticated user"""
+
         response = self._call_api("/v2/auth/tokens")
         return response.result
 
@@ -300,9 +315,9 @@ class BadgrClient:
         """
         Get Assertion of the specified entityId, if eid is not provided
         then get a list of Assertions in authenticated user's backpack
+
         Args:
-            eid (string, optional): entityId of the entity to fetch.
-            Defaults to None.
+            eid (string, optional): entityId of the entity to fetch. Defaults to None.
         """
 
         if eid:
@@ -318,9 +333,9 @@ class BadgrClient:
         """
         Get BadgeClass of the specified entityId, if eid is not provided
         then get a list of BadgeClasses for authenticated user
+
         Args:
-            eid (string, optional): entityId of the entity to fetch.
-            Defaults to None.
+            eid (string, optional): entityId of the entity to fetch. Defaults to None.
         """
 
         return self._fetch_id_or_self(BadgeClass.ENDPOINT, eid)
@@ -329,9 +344,9 @@ class BadgrClient:
         """
         Get Issuer of the specified entityId, if eid is not provided
         then get a list of Issuers for authenticated user
+
         Args:
-            eid (string, optional): entityId of the entity to fetch.
-            Defaults to None.
+            eid (string, optional): entityId of the entity to fetch. Defaults to None.
         """
         return self._fetch_id_or_self(Issuer.ENDPOINT, eid)
 
@@ -339,9 +354,9 @@ class BadgrClient:
         """
         Get Collection of the specified entityId, if eid is not provided
         then get a list of collections for authenticated user
+
         Args:
-            eid (string, optional): entityId of the entity to fetch.
-            Defaults to None.
+            eid (string, optional): entityId of the entity to fetch. Defaults to None.
         """
         return self._fetch_id_or_self("/v2/backpack/collections", eid)
 
@@ -352,8 +367,10 @@ class BadgrClient:
 
         Args:
             ids (list): List of entityIds of Assertionsto revoke
-            reason (string): Revocation reason, defaults to
-            'Revoked by badgerclient'
+            reason (string): Revocation reason, defaults to 'Revoked by badgerclient'
+
+        Raises:
+            BadgrClientError: Email/password not provided.
         """
         payload = []
 
@@ -373,10 +390,10 @@ class BadgrClient:
     ):
 
         if not email:
-            raise Exception("Email is required to make an account")
+            raise BadgrClientError("Email is required to make an account")
 
         if not password:
-            raise Exception("Password is required to make an account")
+            raise BadgrClientError("Password is required to make an account")
 
         payload = {
             "first_name": first_name,
