@@ -51,9 +51,16 @@ class BadgrClient:
                 can be used as a unique identifier for operations.
 
         Note:
+            Enabling unique_badge_names declares that badge names can be used as a unique
+            identifier so the client can keep a track of badge names and their entity id
+            in a dict. Use this if you would like to use badge names at certain places
+            instead of entity id.
+
+        Note:
             If unique_badge_names is set to True call
-            :func:`~badgrclient.badgrclient.BadgrClient.load_badge_names` with appropriate
-            issuer id after init or only badges you create will get registered
+            :func:`~badgrclient.badgrclient.BadgrClient.load_badge_names` to load badges
+            of a particular issuer into the index or only badges you create will get
+            registered in the client's badge name index
 
         """
         self.session = requests.session()
@@ -257,13 +264,19 @@ class BadgrClient:
             self._save_badge_name(badge)
 
     def get_eid_from_badge_name(self, badge_name: str, issuer_eid: str):
-        """Get eid from badge name and in's issuer eid
+        """Get eid from badge name and it's issuer eid.
 
         Args:
             badge_name (string): Name of badge.
             issuer_eid (string): entityId of the the issuer badge belongs to
+
+        Note:
+            For this to work you need to have unique_badge_names enabled
         """
         if not (badge_name or issuer_eid):
+            return None
+
+        if not self.unique_badge_names:
             return None
 
         badge_names = self.badge_names
