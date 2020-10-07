@@ -34,8 +34,8 @@ Logger = logging.getLogger("badgrclient")
 class BadgrClient:
     def __init__(
         self,
-        username: str = getenv('USERNAME'),
-        password: str = getenv('PASSWORD'),
+        username: str = None,
+        password: str = None,
         client_id: str = None,
         scope: str = "rw:profile rw:issuer rw:backpack",
         base_url: str = "http://localhost:8000",
@@ -46,8 +46,8 @@ class BadgrClient:
         """Initalize a new client
 
         Args:
-            username: Badgr username(or email). Defaults to USERNAME from .env file.
-            password: Badgr password. Defaults to PASSWORD from .env file.
+            username: Badgr username(or email). Defaults to None.
+            password: Badgr password. Defaults to None.
             client_id: client_id to use to connect to badgr. Defaults to None.
             scope: OAuth Scope. Defaults to None.
             base_url: badgr-server's url. Defaults to 'http://localhost:8000'.
@@ -145,13 +145,15 @@ class BadgrClient:
 
         return response
 
-    def _get_auth_token(self, username=None, password=None):
+    def _get_auth_token(self, username=getenv('USERNAME'), password=getenv('PASSWORD')):
         """Fetches token and sets header for api calls. Uses refresh_token
         if username and password isn't provided
 
         Args:
             username (string): Badgr username
             password (string): Badgr password
+        Note:
+            By-default reads .env file for USERNAME and PASSWORD
         """
         now = datetime.datetime.now()
 
