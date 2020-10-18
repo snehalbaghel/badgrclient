@@ -8,6 +8,8 @@ from pathlib import Path
 TOKEN_URL = "http://localhost:8000/o/token"
 TEST_IMAGE_PATH_PNG = str(Path("tests/test_image.png"))
 TEST_IMAGE_PATH_SVG = str(Path("tests/test_image.svg"))
+TEST_USER = "test"
+TEST_PASSWORD = "test_pass"
 
 
 def get_badgeclass_data(**kwargs):
@@ -48,8 +50,8 @@ def client(requests_mock):
     requests_mock.post(TOKEN_URL, text=get_mock_auth_text())
 
     client = BadgrClient(
-        username="test",
-        password="test_pass",
+        username=TEST_USER,
+        password=TEST_PASSWORD,
         client_id="kewl_client",
         scope="rw:profile rw:issuer rw:backpack",
     )
@@ -57,12 +59,26 @@ def client(requests_mock):
     return client
 
 
-def test_client_init(client):
+def test_client_init(client, mocker):
     """Test client instance is correctly created"""
+
     assert client.scope == "rw:profile rw:issuer rw:backpack"
     assert client.refresh_token == "mock_refresh_token"
     assert client.base_url == "http://localhost:8000"
     assert client.header == {"Authorization": "Bearer mock_token"}
+
+
+def test_client_credentials(mocker):
+    """Test username password"""
+
+    mocker.patch("badgrclient.BadgrClient._get_auth_token")
+    BadgrClient(
+        username=TEST_USER,
+        password=TEST_PASSWORD,
+        client_id="kewl_client",
+        scope="rw:profile rw:issuer rw:backpack",
+    )
+    BadgrClient._get_auth_token.assert_called_once_with(TEST_USER, TEST_PASSWORD)
 
 
 def test_token_refresh(requests_mock):
@@ -77,8 +93,8 @@ def test_token_refresh(requests_mock):
     )
 
     client = BadgrClient(
-        username="test",
-        password="test_pass",
+        username=TEST_USER,
+        password=TEST_PASSWORD,
         client_id="kewl_client",
         scope="rw:profile rw:issuer rw:backpack",
     )
@@ -89,7 +105,7 @@ def test_token_refresh(requests_mock):
     requests_mock.post(
         TOKEN_URL, text=get_mock_auth_text(token="refreshed_token")
     )
-    # Call api to rigger refresh
+    # Call api to trigger refresh
     client.fetch_assertion()
 
     assert client.header == {"Authorization": "Bearer refreshed_token"}
@@ -294,8 +310,8 @@ def unique_badge_client(requests_mock):
     requests_mock.post(TOKEN_URL, text=get_mock_auth_text())
 
     client = BadgrClient(
-        username="test",
-        password="test_pass",
+        username=TEST_USER,
+        password=TEST_PASSWORD,
         client_id="kewl_client",
         scope="rw:profile rw:issuer rw:backpack",
         unique_badge_names=True,
