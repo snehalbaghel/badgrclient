@@ -167,7 +167,7 @@ class BadgrClient:
             username (string): Badgr username
             password (string): Badgr password
         Note:
-            By-default reads .env file for USERNAME and PASSWORD
+            By-default reads .env file for BADGR_USERNAME and BADGR_PASSWORD
         """
         now = datetime.datetime.now()
 
