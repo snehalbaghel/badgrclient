@@ -319,14 +319,16 @@ class BadgrClient:
                     extension
                 )
             )
+        try:
+            with open(file_path, "rb") as img_f:
+                encoded_string = "data:{};base64,{}".format(
+                    mime_type,
+                    base64.b64encode(img_f.read()).decode("utf8"),
+                )
+        except FileNotFoundError:
+            return None
 
-        with open(file_path, "rb") as img_f:
-            encoded_string = "data:{};base64,{}".format(
-                mime_type,
-                base64.b64encode(img_f.read()).decode("utf8"),
-            )
-
-            return encoded_string
+        return encoded_string
 
     def fetch_tokens(self):
         """Get a list of access tokens for authenticated user"""
