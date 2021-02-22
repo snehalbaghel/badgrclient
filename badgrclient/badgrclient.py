@@ -10,6 +10,13 @@ from .badgrmodels import (
 from typing import List, Union
 from .exceptions import APIError, BadgrClientError
 
+from os.path import join, dirname
+from dotenv import load_dotenv
+from os import getenv
+
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+
 MODELS = {
     "Assertion": Assertion,
     "BadgeClass": BadgeClass,
@@ -152,13 +159,15 @@ class BadgrClient:
 
         return response
 
-    def _get_auth_token(self, username=None, password=None):
+    def _get_auth_token(self, username=getenv('USERNAME'), password=getenv('PASSWORD')):
         """Fetches token and sets header for api calls. Uses refresh_token
         if username and password isn't provided
 
         Args:
             username (string): Badgr username
             password (string): Badgr password
+        Note:
+            By-default reads .env file for USERNAME and PASSWORD
         """
         now = datetime.datetime.now()
 
