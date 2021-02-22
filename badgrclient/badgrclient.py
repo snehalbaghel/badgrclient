@@ -159,7 +159,8 @@ class BadgrClient:
 
         return response
 
-    def _get_auth_token(self, username=getenv('BADGR_USERNAME'), password=getenv('BADGR_PASSWORD')):
+    def _get_auth_token(self, username=getenv('BADGR_USERNAME'),
+                        password=getenv('BADGR_PASSWORD')):
         """Fetches token and sets header for api calls. Uses refresh_token
         if username and password isn't provided
 
