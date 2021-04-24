@@ -5,8 +5,9 @@ BadgrClient is the class that is responsible for authentication and calling of t
 has some fetcher functions and some operations that dont fall spcifically under any 'Badgr Model'. For other
 operations you will have to use the Badgr Models (Asserstion, BadgeClass, Issuer).
 
-.. note::
-   Keep in mind that the models can't do anything on their own so they still need to be passed a client instance to do it's job. 
+You can init badgrclient by either providing credentials to its constructor or setting a .env file with
+``BADGR_USERNAME`` and ``BADGR_PASSWORD``
+
 
 .. toctree::
    :maxdepth: 4
