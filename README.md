@@ -1,6 +1,5 @@
 # Quickstart
 
-
 **badgrclient** is a python library for [Badgr](https://github.com/concentricsky/badgr-server) APIs
 
 #### Installation
@@ -8,6 +7,10 @@
 ```bash
 pip install badgrclient
 ```
+
+### Docs
+
+https://badgrclient.readthedocs.io/
 
 #### Usage
 
